@@ -38,3 +38,56 @@ architectures.
 In short, this project wasn’t created as a demo or generic template:
 it was born from an actual need in my own e-commerce system and evolved
 into a fully-fledged microservice that solves a real engineering problem.
+
+## Architecture Overview
+
+This microservice follows a clean, modular, production-ready architecture:
+
+- **Fastify Server Layer**  
+  Provides an HTTP surface for healthchecks and future internal hooks.
+
+- **Worker Layer (ImageIngestionWorker)**  
+  Processes the product list, retrieves images, uploads them to Cloudinary,
+  and registers them in the backend.
+
+- **Service Layer**
+    - UnsplashService → retrieves category-relevant images
+    - CloudinaryService → uploads images and returns CDN URLs
+    - LaravelApiClient → registers uploaded images in the Laravel backend
+
+- **Utility Layer**  
+  Contains logging (Pino), retry/backoff helpers, type definitions, etc.
+
+- **Config Layer**  
+  Centralizes environment variables and validates required configuration.
+
+
+
+
+## How It Works
+
+This microservice performs a fully automated image ingestion pipeline:
+
+1. **Load Product Dataset**  
+   Reads a JSON file containing hundreds of products, each mapped to a category.
+
+2. **Fetch Category-Relevant Images (Unsplash)**  
+   For each product, the microservice queries Unsplash to retrieve multiple
+   high-quality images that match the product's category (e.g., hoodies, denim,
+   t-shirts, dresses).
+
+3. **Process and Upload to Cloudinary**  
+   The selected images are downloaded, prepared as buffers, and uploaded to
+   Cloudinary. The upload response returns secure, CDN-ready image URLs.
+
+4. **Register Image URLs in Laravel Backend**  
+   After successful upload, the microservice securely calls internal Laravel
+   API endpoints and registers the image URLs under the corresponding product.
+
+5. **Structured Logging and Retry Logic**  
+   Every step of the pipeline is logged using Pino. If Unsplash or Cloudinary
+   fail temporarily, retry + exponential backoff ensures robust recovery.
+
+This flow transforms a static product dataset into a fully imaged product
+catalog with no manual effort — ideal for development, staging, and early MVP
+environments in e-commerce systems.
