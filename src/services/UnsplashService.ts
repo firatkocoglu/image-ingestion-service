@@ -32,6 +32,7 @@
 import * as axios from 'axios';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
+import { retry } from '../utils/retry';
 
 const CATEGORY_QUERY_MAP: Record<string, string> = {
   't-shirts': 't-shirt apparel studio white background',
@@ -56,6 +57,19 @@ const CATEGORY_QUERY_MAP: Record<string, string> = {
   bags: 'bag tote handbag studio product isolated',
 };
 
+type UnsplashSearchResponse = {
+  total: number;
+  total_pages: number;
+  results: {
+    id: string;
+    urls: {
+      regular: string;
+      [key: string]: string;
+    };
+    [key: string]: any;
+  }[];
+};
+
 export type UnsplashImageResult = {
   url: string;
 };
@@ -77,7 +91,7 @@ export class UnsplashService {
     const url = 'https://api.unsplash.com/search/photos';
 
     try {
-      const response = await axios.get(url, {
+      const response = await axios.get<UnsplashSearchResponse>(url, {
         params: {
           query,
           per_page: this.querySize,
@@ -101,7 +115,9 @@ export class UnsplashService {
 
     logger.info({ categorySlug, query }, 'Fetching images from Unsplash for category');
 
-    const results = await this.makeUnsplashRequest(query);
+    const results = await retry(() => this.makeUnsplashRequest(query), {
+      operationName: 'unsplash-request',
+    });
 
     if (!Array.isArray(results) || results.length == 0) {
       logger.warn({ categorySlug, query }, 'No images found in Unsplash response');

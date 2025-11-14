@@ -23,3 +23,113 @@
  * - uploadImage(buffer, productId, index) -> secure_url
  * - uploadAll(imageUrls, productId) -> secure_url[]
  */
+
+import * as axios from 'axios';
+import { v2 as cloudinary } from 'cloudinary';
+import { env } from '../config/env';
+import { logger } from '../utils/logger';
+import { retry } from '../utils/retry';
+
+export class CloudinaryService {
+  constructor() {
+    cloudinary.config({
+      cloud_name: env.cloudinaryCloudName,
+      api_key: env.cloudinaryApiKey,
+      api_secret: env.cloudinaryApiSecret,
+    });
+  }
+
+  /*
+   * Download image from Unsplash (as Buffer)
+   */
+  async downloadImage(url: string): Promise<Buffer> {
+    return await retry(
+      async () => {
+        const response = await axios.get<ArrayBuffer>(url, {
+          responseType: 'arraybuffer', // We need response as buffer
+          timeout: 8000,
+        });
+
+        return Buffer.from(response.data);
+      },
+      {
+        operationName: 'cloudinary-download',
+      },
+    );
+  }
+
+  /*
+   * Upload image buffer to Cloudinary
+   */
+  async uploadBuffer(buffer: Buffer, productId: string, index: number): Promise<string> {
+    return await retry(
+      async () => {
+        const folder = `${env.cloudinaryUploadFolder}/${productId}`;
+
+        return new Promise<string>((resolve, reject) => {
+          const upload = cloudinary.uploader.upload_stream(
+            {
+              folder,
+              public_id: `image_${index}`,
+              resource_type: 'image',
+            },
+            (err, result) => {
+              if (err) return reject(err);
+              if (!result?.secure_url)
+                return reject(new Error('No secure_url returned from Cloudinary'));
+              resolve(result.secure_url);
+            },
+          );
+          upload.end(buffer);
+        });
+      },
+      {
+        operationName: 'cloudinary-upload',
+      },
+    );
+  }
+
+  /*
+   * Upload multiple image URLs to Cloudinary sequentially
+   */
+  async uploadAll(imageUrls: string[], productId: number): Promise<string[]> {
+    const secureUrls: string[] = [];
+
+    // sequential upload
+    for (let i = 0; i < imageUrls.length; i++) {
+      const originalUrl = imageUrls[i];
+
+      logger.info(
+        {
+          productId,
+          originalUrl,
+          index: i,
+        },
+        'Downloading image for Cloudinary',
+      );
+
+      const buffer = await this.downloadImage(originalUrl);
+
+      logger.info(
+        {
+          productId,
+          index: i,
+        },
+        'Uploading buffer to Cloudinary',
+      );
+
+      const secureUrl = await this.uploadBuffer(buffer, productId.toString(), i);
+      secureUrls.push(secureUrl);
+    }
+
+    logger.info(
+      {
+        productId,
+        count: secureUrls.length,
+      },
+      'Uploaded all images to Cloudinary',
+    );
+
+    return secureUrls;
+  }
+}
