@@ -24,6 +24,7 @@
 import axios from 'axios';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
+import { image } from '../types/image';
 
 export class LaravelApiClient {
   private readonly client: {
@@ -31,7 +32,7 @@ export class LaravelApiClient {
       request: { use: (arg0: (config: any) => any) => void };
       response: { use: (arg0: (response: any) => any, arg1: (error: any) => never) => void };
     };
-    post: (arg0: string, arg1: { urls: string[] }) => any;
+    post: (arg0: string, arg1: { imageData: image[] }) => any;
   };
 
   constructor() {
@@ -79,14 +80,14 @@ export class LaravelApiClient {
     );
   }
 
-  async uploadProductImages(productId: number, imageUrls: string[]): Promise<void> {
+  async uploadProductImages(productId: number, imageData: image[]): Promise<void> {
     try {
       const response = await this.client.post(`/products/${productId}/images`, {
-        urls: imageUrls,
+        imageData,
       });
 
       logger.info(
-        { productId, count: imageUrls.length, status: response.status },
+        { productId, count: imageData.length, status: response.status },
         'Uploaded images to Laravel backend successfully',
       );
     } catch (error: any) {

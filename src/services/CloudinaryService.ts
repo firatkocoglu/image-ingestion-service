@@ -29,6 +29,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { retry } from '../utils/retry';
+import type { UploadApiResponse, UploadApiErrorResponse } from 'cloudinary';
+import { image } from '../types/image';
 
 export class CloudinaryService {
   constructor() {
@@ -61,23 +63,23 @@ export class CloudinaryService {
   /*
    * Upload image buffer to Cloudinary
    */
-  async uploadBuffer(buffer: Buffer, productId: string, index: number): Promise<string> {
+  async uploadBuffer(buffer: Buffer, productId: string, index: number): Promise<UploadApiResponse> {
     return await retry(
       async () => {
         const folder = `${env.cloudinaryUploadFolder}/${productId}`;
 
-        return new Promise<string>((resolve, reject) => {
+        return new Promise<UploadApiResponse>((resolve, reject) => {
           const upload = cloudinary.uploader.upload_stream(
             {
               folder,
               public_id: `image_${index}`,
               resource_type: 'image',
             },
-            (err, result) => {
+            (err: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
               if (err) return reject(err);
               if (!result?.secure_url)
                 return reject(new Error('No secure_url returned from Cloudinary'));
-              resolve(result.secure_url);
+              resolve(result);
             },
           );
           upload.end(buffer);
@@ -92,8 +94,8 @@ export class CloudinaryService {
   /*
    * Upload multiple image URLs to Cloudinary sequentially
    */
-  async uploadAll(imageUrls: string[], productId: number): Promise<string[]> {
-    const secureUrls: string[] = [];
+  async uploadAll(imageUrls: string[], productId: number): Promise<image[]> {
+    const images: image[] = [];
 
     // sequential upload
     for (let i = 0; i < imageUrls.length; i++) {
@@ -118,18 +120,20 @@ export class CloudinaryService {
         'Uploading buffer to Cloudinary',
       );
 
-      const secureUrl = await this.uploadBuffer(buffer, productId.toString(), i);
-      secureUrls.push(secureUrl);
+      const imageResponse = await this.uploadBuffer(buffer, productId.toString(), i);
+
+      const { secure_url, public_id, width, height, bytes, format } = imageResponse;
+      images.push({ secureUrl: secure_url, publicId: public_id, width, height, bytes, format });
     }
 
     logger.info(
       {
         productId,
-        count: secureUrls.length,
+        count: images.length,
       },
       'Uploaded all images to Cloudinary',
     );
 
-    return secureUrls;
+    return images;
   }
 }

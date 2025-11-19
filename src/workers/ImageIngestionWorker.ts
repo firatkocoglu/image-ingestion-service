@@ -60,6 +60,8 @@ import { CloudinaryService } from '../services/CloudinaryService';
 import { LaravelApiClient } from '../services/LaravelApiClient';
 import { retry } from '../utils/retry';
 import { logger } from '../utils/logger';
+import axios from 'axios';
+import { env } from '../config/env';
 
 export class ImageIngestionWorker {
   private productsToProcess: any[] = [];
@@ -158,6 +160,19 @@ export class ImageIngestionWorker {
     const laravelApiClient = new LaravelApiClient();
 
     try {
+      // Step 0: Check if product has images already registered in Laravel
+      const numberOfRegisteredImages = await axios.get(
+        env.laravelApiBaseUrl + `/ingest/product/${product.id}/images`,
+      );
+
+      if (numberOfRegisteredImages.data.count >= 4) {
+        logger.info(
+          { productId: product.id },
+          `Product with ID ${product.id} already has 4 images registered in Laravel, skipping ingestion pipeline .`,
+        );
+        return;
+      }
+
       // Step 1: Fetch image URLs from Unsplash
       const categoryId = product.categories[0];
       const categorySlug: string = categories.find(
@@ -172,26 +187,26 @@ export class ImageIngestionWorker {
       }
 
       // Download + upload images to Cloudinary
-      const uploadedImageUrls = await retry(() => {
+      const uploadedImages = await retry(() => {
         return cloudinaryService.uploadAll(rawUrls, product.id);
       });
 
-      if (rawUrls.length !== uploadedImageUrls.length) {
+      if (rawUrls.length !== uploadedImages.length) {
         logger.warn(
           {
             productId: product.id,
             rawCount: rawUrls.length,
-            uploadedCount: uploadedImageUrls.length,
+            uploadedCount: uploadedImages.length,
           },
           'Number of uploaded images does not match the number of fetched images',
         );
         throw new Error('Failed to upload all images to Cloudinary');
       }
 
-      await laravelApiClient.uploadProductImages(product.id, uploadedImageUrls);
+      await laravelApiClient.uploadProductImages(product.id, uploadedImages);
 
       logger.info(
-        { productId: product.id, count: uploadedImageUrls.length },
+        { productId: product.id, count: uploadedImages.length },
         'Images found and uploaded successfully.',
       );
     } catch (error) {
