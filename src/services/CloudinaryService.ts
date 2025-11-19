@@ -24,7 +24,7 @@
  * - uploadAll(imageUrls, productId) -> secure_url[]
  */
 
-import * as axios from 'axios';
+import axios from 'axios';
 import { v2 as cloudinary } from 'cloudinary';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';

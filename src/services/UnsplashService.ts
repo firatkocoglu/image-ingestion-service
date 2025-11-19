@@ -29,7 +29,7 @@
  * bags: "bag tote handbag studio product isolated"
  */
 
-import * as axios from 'axios';
+import axios from 'axios';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { retry } from '../utils/retry';
@@ -110,7 +110,7 @@ export class UnsplashService {
     }
   }
 
-  async fetchImagesForCategory(categorySlug: string): Promise<UnsplashImageResult[]> {
+  async fetchImagesForCategory(categorySlug: string): Promise<string[]> {
     const query = this.buildQuery(categorySlug);
 
     logger.info({ categorySlug, query }, 'Fetching images from Unsplash for category');
@@ -124,10 +124,8 @@ export class UnsplashService {
       return [];
     }
 
-    const images: UnsplashImageResult[] = results
-      .map((item: any) => ({
-        url: item?.urls?.regular, // We are using a regular size image
-      }))
+    const images = results
+      .map((item: any) => item?.urls?.regular) // We are using a regular size image))
       .filter((image) => Boolean(image.url));
 
     logger.info(

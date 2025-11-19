@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "slug": "t-shirts",
+    "name": "T-Shirts"
+  },
+  {
+    "id": 2,
+    "slug": "hoodies",
+    "name": "Hoodies"
+  },
+  {
+    "id": 3,
+    "slug": "sweaters",
+    "name": "Sweaters"
+  },
+  {
+    "id": 4,
+    "slug": "denim",
+    "name": "Denim"
+  },
+  {
+    "id": 5,
+    "slug": "chinos",
+    "name": "Chinos"
+  },
+  {
+    "id": 6,
+    "slug": "dresses",
+    "name": "Dresses"
+  },
+  {
+    "id": 7,
+    "slug": "skirts",
+    "name": "Skirts"
+  },
+  {
+    "id": 8,
+    "slug": "blouses",
+    "name": "Blouses"
+  },
+  {
+    "id": 9,
+    "slug": "shirts",
+    "name": "Shirts"
+  },
+  {
+    "id": 10,
+    "slug": "suits",
+    "name": "Suits"
+  },
+  {
+    "id": 11,
+    "slug": "jackets",
+    "name": "Jackets"
+  },
+  {
+    "id": 12,
+    "slug": "coats",
+    "name": "Coats"
+  },
+  {
+    "id": 13,
+    "slug": "activewear",
+    "name": "Activewear"
+  },
+  {
+    "id": 14,
+    "slug": "loungewear",
+    "name": "Loungewear"
+  },
+  {
+    "id": 15,
+    "slug": "underwear",
+    "name": "Underwear"
+  },
+  {
+    "id": 16,
+    "slug": "socks",
+    "name": "Socks"
+  },
+  {
+    "id": 17,
+    "slug": "scarves",
+    "name": "Scarves"
+  },
+  {
+    "id": 18,
+    "slug": "hats",
+    "name": "Hats"
+  },
+  {
+    "id": 19,
+    "slug": "belts",
+    "name": "Belts"
+  },
+  {
+    "id": 20,
+    "slug": "bags",
+    "name": "Fabric Bags"
+  },
+  {
+    "id": 21,
+    "slug": "linen",
+    "name": "Linen"
+  },
+  {
+    "id": 22,
+    "slug": "cotton",
+    "name": "Cotton"
+  },
+  {
+    "id": 23,
+    "slug": "wool",
+    "name": "Wool"
+  },
+  {
+    "id": 24,
+    "slug": "silk",
+    "name": "Silk"
+  }
+]
