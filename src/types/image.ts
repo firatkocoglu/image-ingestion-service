@@ -1,6 +1,6 @@
 export type image = {
-  secureUrl: string;
-  publicId: string;
+  secure_url: string;
+  public_id: string;
   width: number;
   height: number;
   bytes: number;

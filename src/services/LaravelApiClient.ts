@@ -82,7 +82,7 @@ export class LaravelApiClient {
 
   async uploadProductImages(productId: number, imageData: image[]): Promise<void> {
     try {
-      const response = await this.client.post(`/products/${productId}/images`, {
+      const response = await this.client.post(`ingest/products/${productId}/images`, {
         imageData,
       });
 

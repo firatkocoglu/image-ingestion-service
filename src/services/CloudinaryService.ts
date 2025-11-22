@@ -123,7 +123,7 @@ export class CloudinaryService {
       const imageResponse = await this.uploadBuffer(buffer, productId.toString(), i);
 
       const { secure_url, public_id, width, height, bytes, format } = imageResponse;
-      images.push({ secureUrl: secure_url, publicId: public_id, width, height, bytes, format });
+      images.push({ secure_url, public_id, width, height, bytes, format });
     }
 
     logger.info(

@@ -87,14 +87,19 @@ export class UnsplashService {
     return base;
   }
 
-  private async makeUnsplashRequest(query: string) {
+  private async makeUnsplashRequest(
+    query: string,
+    querySize: number = this.querySize,
+    page: number = 1,
+  ): Promise<{ pages: number; results: UnsplashSearchResponse['results'] }> {
     const url = 'https://api.unsplash.com/search/photos';
 
     try {
       const response = await axios.get<UnsplashSearchResponse>(url, {
         params: {
           query,
-          per_page: this.querySize,
+          page,
+          per_page: 30,
         },
         headers: {
           Authorization: `Client-ID ${this.accessKey}`,
@@ -102,7 +107,10 @@ export class UnsplashService {
         timeout: 8000,
       });
 
-      return response.data?.results;
+      return {
+        pages: response.data.total_pages,
+        results: response.data?.results,
+      };
     } catch (err: any) {
       const status = err?.response?.status;
       logger.error({ query, status }, 'Unsplash API request failed');
@@ -110,28 +118,38 @@ export class UnsplashService {
     }
   }
 
-  async fetchImagesForCategory(categorySlug: string): Promise<string[]> {
+  async fetchImagesForCategory(categorySlug: string, remaining: number = 4): Promise<string[]> {
     const query = this.buildQuery(categorySlug);
 
     logger.info({ categorySlug, query }, 'Fetching images from Unsplash for category');
 
-    const results = await retry(() => this.makeUnsplashRequest(query), {
+    const images: string[] = [];
+
+    const response = await retry(() => this.makeUnsplashRequest(query, remaining), {
       operationName: 'unsplash-request',
     });
+    const { pages, results } = response;
 
     if (!Array.isArray(results) || results.length == 0) {
       logger.warn({ categorySlug, query }, 'No images found in Unsplash response');
       return [];
     }
 
-    const images = results
-      .map((item: any) => item?.urls?.regular) // We are using a regular size image))
-      .filter((image) => Boolean(image.url));
+    images.push(...results.map((item: any) => item?.urls?.regular));
+
+    if (pages > 1) {
+      for (let i = 2; i <= pages; i++) {
+        const response = await retry(() => this.makeUnsplashRequest(query, remaining, i), {});
+        images.push(...response.results.map((item: any) => item?.urls?.regular));
+      }
+    }
 
     logger.info(
       { categorySlug, requested: this.querySize, received: images.length },
       'Unsplash images fetched successfully',
     );
+
+    console.log('Fetched Unsplash images:', images);
 
     return images;
   }

@@ -49,7 +49,7 @@
  * This feature allows:
  * - quickly retrying transient failures (Cloudinary/Unsplash issues)
  * - avoiding reprocessing the entire catalog
- * - better development & production iteration
+ * - better development and production iteration
  */
 import products from '../../data/products.json';
 import categories from '../../data/categories.json';
@@ -62,10 +62,12 @@ import { retry } from '../utils/retry';
 import { logger } from '../utils/logger';
 import axios from 'axios';
 import { env } from '../config/env';
+import AxiosXHR = Axios.AxiosXHR;
 
 export class ImageIngestionWorker {
-  private productsToProcess: any[] = [];
-  private failedProducts: number[] = [];
+  private readonly productsToProcess: any[] = [];
+  private readonly failedProducts: number[] = [];
+  private readonly categoryCache: { [key: string]: string[] } = {};
 
   constructor() {
     // Parse CLI Flags
@@ -78,7 +80,6 @@ export class ImageIngestionWorker {
         .split('=')[1]
         .split(',')
         .map((id) => Number(id.trim()));
-
       this.productsToProcess = products.filter((product: any) => productIds.includes(product.id));
 
       console.log(`Targeted run: Processing ${productIds.join(',')} products...`);
@@ -160,12 +161,12 @@ export class ImageIngestionWorker {
     const laravelApiClient = new LaravelApiClient();
 
     try {
-      // Step 0: Check if product has images already registered in Laravel
-      const numberOfRegisteredImages = await axios.get(
-        env.laravelApiBaseUrl + `/ingest/product/${product.id}/images`,
+      // Step 0: Check if the product has images already registered in Laravel
+      const numberOfRegisteredImages: AxiosXHR<any> = await axios.get(
+        env.laravelApiBaseUrl + `/ingest/products/${product.id}/images`,
       );
 
-      if (numberOfRegisteredImages.data.count >= 4) {
+      if (numberOfRegisteredImages.data >= 4) {
         logger.info(
           { productId: product.id },
           `Product with ID ${product.id} already has 4 images registered in Laravel, skipping ingestion pipeline .`,
@@ -173,20 +174,48 @@ export class ImageIngestionWorker {
         return;
       }
 
+      const remaining = 4 - numberOfRegisteredImages.data;
+
       // Step 1: Fetch image URLs from Unsplash
       const categoryId = product.categories[0];
       const categorySlug: string = categories.find(
         (cat: { id: number; slug: string; name: string }) => cat.id === categoryId,
       )!.slug;
-      const rawUrls = await retry(() => {
-        return unsplashService.fetchImagesForCategory(categorySlug);
-      });
+
+      if (!this.categoryCache[categorySlug]) {
+        this.categoryCache[categorySlug] = await retry(() => {
+          return unsplashService.fetchImagesForCategory(categorySlug, remaining);
+        });
+
+        logger.info(
+          {
+            productId: product.id,
+            categorySlug,
+            remaining,
+          },
+          'Cached Unsplash URLs successfully',
+        );
+      }
+
+      const randomImages = this.categoryCache[categorySlug].sort(() => Math.random() - 0.5);
+
+      const rawUrls = randomImages.slice(0, remaining);
+
+      logger.info(
+        {
+          productId: product.id,
+          categorySlug,
+          rawUrlsCount: rawUrls.length,
+          remaining,
+        },
+        'Fetched Unsplash URLs successfully',
+      );
 
       if (rawUrls.length === 0) {
         throw new Error('Unsplash returned zero images');
       }
 
-      // Download + upload images to Cloudinary
+      // Upload the images coming from Unsplash to Cloudinary
       const uploadedImages = await retry(() => {
         return cloudinaryService.uploadAll(rawUrls, product.id);
       });
