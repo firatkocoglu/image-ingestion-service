@@ -107,6 +107,8 @@ export class UnsplashService {
         timeout: 8000,
       });
 
+      console.log(response.data);
+
       return {
         pages: response.data.total_pages,
         results: response.data?.results,
@@ -138,8 +140,12 @@ export class UnsplashService {
     images.push(...results.map((item: any) => item?.urls?.regular));
 
     if (pages > 1) {
-      for (let i = 2; i <= pages; i++) {
-        const response = await retry(() => this.makeUnsplashRequest(query, remaining, i), {});
+      const pageLimit = Math.min(pages, 10);
+      for (let i = 2; i <= pageLimit; i++) {
+        console.log('fetching page: ' + i);
+        const response = await retry(() => this.makeUnsplashRequest(query, remaining, i), {
+          operationName: 'unsplash-request',
+        });
         images.push(...response.results.map((item: any) => item?.urls?.regular));
       }
     }

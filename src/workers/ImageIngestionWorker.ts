@@ -109,12 +109,8 @@ export class ImageIngestionWorker {
   async run() {
     console.log(`Starting ingestion for ${this.productsToProcess.length} products...`);
     for (const product of this.productsToProcess) {
-      console.log(`\n Processing product ${product.id}: ${product.name}...`);
-
       try {
         await this.processProduct(product);
-
-        console.log(`Product ${product.id} processed successfully.`);
       } catch (error) {
         console.error(`Error processing product ${product.id}:`, error);
 
@@ -169,7 +165,7 @@ export class ImageIngestionWorker {
       if (numberOfRegisteredImages.data >= 4) {
         logger.info(
           { productId: product.id },
-          `Product with ID ${product.id} already has 4 images registered in Laravel, skipping ingestion pipeline .`,
+          `Product with ID ${product.id} already has 4 images registered in Laravel, skipping ingestion pipeline.`,
         );
         return;
       }
@@ -194,6 +190,15 @@ export class ImageIngestionWorker {
             remaining,
           },
           'Cached Unsplash URLs successfully',
+        );
+      } else {
+        logger.info(
+          {
+            productId: product.id,
+            categorySlug,
+            cachedCount: this.categoryCache[categorySlug].length,
+          },
+          'Using cached Unsplash URLs',
         );
       }
 
